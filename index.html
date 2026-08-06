@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumo - Personal Productivity App</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="app-title">Lumo</h1>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="app-body">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <ul class="nav-list">
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="dashboard">Dashboard</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="tasks">Tasks</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="goals">Goals</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="habits">Habits</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="calendar">Calendar</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="subjects">Subjects</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="time">Time Tracker</a></li>
+                        <li class="nav-item"><a href="#" class="nav-link" data-module="canvas">Canvas</a></li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Main Workspace -->
+            <main class="main-workspace">
+                <div id="workspace-content" class="workspace-content">
+                    <p class="welcome-message">Select a module from the sidebar to get started.</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <span class="footer-text">&copy; Lumo App</span>
+        </footer>
+    </div>
+
+    <!-- Configuration -->
+    <script src="js/config.js"></script>
+    
+    <!-- Storage Layer -->
+    <script src="js/storage.js"></script>
+    
+    <!-- Main Application -->
+    <script src="js/app.js"></script>
+</body>
+</html>
