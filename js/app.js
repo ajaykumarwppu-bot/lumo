@@ -11,8 +11,11 @@ var LumoApp = (function() {
     // Private variables
     var isInitialized = false;
     var currentModule = null;
-    var navLinks = [];
+    var navItems = [];
     var workspaceContent = null;
+    var inspector = null;
+    var insClose = null;
+    var shell = null;
 
     /**
      * Initialize the application
@@ -34,7 +37,10 @@ var LumoApp = (function() {
 
         // Cache DOM elements
         workspaceContent = document.getElementById('workspace-content');
-        navLinks = document.querySelectorAll('.nav-link');
+        navItems = document.querySelectorAll('.navitem');
+        inspector = document.getElementById('inspector');
+        insClose = document.getElementById('insClose');
+        shell = document.getElementById('shell');
 
         // Verify DOM elements are available
         if (!workspaceContent) {
@@ -47,6 +53,9 @@ var LumoApp = (function() {
 
         // Load default module
         loadDefaultModule();
+
+        // Initialize spores canvas
+        initSpores();
 
         // Mark as initialized
         isInitialized = true;
@@ -63,8 +72,13 @@ var LumoApp = (function() {
      */
     function setupEventListeners() {
         // Navigation click handlers
-        for (var i = 0; i < navLinks.length; i++) {
-            navLinks[i].addEventListener('click', handleNavClick);
+        for (var i = 0; i < navItems.length; i++) {
+            navItems[i].addEventListener('click', handleNavClick);
+        }
+
+        // Inspector close button
+        if (insClose) {
+            insClose.addEventListener('click', closeInspector);
         }
 
         // Optional: Handle browser back/forward
@@ -74,36 +88,34 @@ var LumoApp = (function() {
     }
 
     /**
-     * Handle navigation link clicks
+     * Handle navigation item clicks
      * @private
      * @param {Event} event - The click event
      */
     function handleNavClick(event) {
-        event.preventDefault();
-
-        var link = event.currentTarget;
-        var moduleName = link.getAttribute('data-module');
+        var item = event.currentTarget;
+        var moduleName = item.getAttribute('data-module');
 
         if (moduleName) {
             loadModule(moduleName);
-            updateActiveNav(link);
+            updateActiveNav(item);
         }
     }
 
     /**
      * Update active navigation state
      * @private
-     * @param {HTMLElement} activeLink - The currently active link
+     * @param {HTMLElement} activeItem - The currently active item
      */
-    function updateActiveNav(activeLink) {
-        // Remove active class from all links
-        for (var i = 0; i < navLinks.length; i++) {
-            navLinks[i].classList.remove('active');
+    function updateActiveNav(activeItem) {
+        // Remove active class from all items
+        for (var i = 0; i < navItems.length; i++) {
+            navItems[i].classList.remove('on');
         }
 
-        // Add active class to clicked link
-        if (activeLink) {
-            activeLink.classList.add('active');
+        // Add active class to clicked item
+        if (activeItem) {
+            activeItem.classList.add('on');
         }
     }
 
@@ -114,12 +126,12 @@ var LumoApp = (function() {
     function loadDefaultModule() {
         var defaultModule = LumoConfig.get('ui.defaultModule') || 'dashboard';
         
-        // Find the nav link for the default module
-        for (var i = 0; i < navLinks.length; i++) {
-            var link = navLinks[i];
-            if (link.getAttribute('data-module') === defaultModule) {
+        // Find the nav item for the default module
+        for (var i = 0; i < navItems.length; i++) {
+            var item = navItems[i];
+            if (item.getAttribute('data-module') === defaultModule) {
                 loadModule(defaultModule);
-                updateActiveNav(link);
+                updateActiveNav(item);
                 break;
             }
         }
@@ -138,16 +150,41 @@ var LumoApp = (function() {
         // Placeholder: Just show module name in workspace
         // Actual module loading will be implemented later
         if (workspaceContent) {
+            var capitalized = capitalizeFirstLetter(moduleName);
             workspaceContent.innerHTML = 
-                '<div class="module-placeholder">' +
-                    '<h2 class="module-title">' + capitalizeFirstLetter(moduleName) + '</h2>' +
-                    '<p class="module-description">Module content will be loaded here.</p>' +
+                '<div class="viewhead rise">' +
+                    '<span class="eyebrow">Module</span>' +
+                    '<h1 class="vt">' + capitalized + '</h1>' +
+                    '<p class="sub">Module content will be loaded here.</p>' +
+                '</div>' +
+                '<div class="panel rise d1">' +
+                    '<div class="lbl">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+                            '<circle cx="12" cy="12" r="9"/>' +
+                            '<path d="M12 3v18M3 12h18"/>' +
+                        '</svg>' +
+                        '<span class="leaf">' + capitalized + '</span>' +
+                    '</div>' +
+                    '<p style="color:var(--dim);font-size:13.5px;line-height:1.7;">' +
+                        'This is the ' + moduleName + ' module placeholder. ' +
+                        'Full functionality will be implemented soon.' +
+                    '</p>' +
                 '</div>';
         }
 
         // Store current module in history
         if (window.history && window.history.pushState) {
             window.history.pushState({ module: moduleName }, moduleName, '#' + moduleName);
+        }
+    }
+
+    /**
+     * Close inspector panel
+     * @private
+     */
+    function closeInspector() {
+        if (shell) {
+            shell.classList.remove('insp');
         }
     }
 
@@ -161,10 +198,10 @@ var LumoApp = (function() {
             loadModule(event.state.module);
             
             // Update active nav
-            for (var i = 0; i < navLinks.length; i++) {
-                var link = navLinks[i];
-                if (link.getAttribute('data-module') === event.state.module) {
-                    updateActiveNav(link);
+            for (var i = 0; i < navItems.length; i++) {
+                var item = navItems[i];
+                if (item.getAttribute('data-module') === event.state.module) {
+                    updateActiveNav(item);
                     break;
                 }
             }
@@ -180,6 +217,66 @@ var LumoApp = (function() {
     function capitalizeFirstLetter(str) {
         if (!str) return '';
         return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    /**
+     * Initialize ambient spores canvas animation
+     * @private
+     */
+    function initSpores() {
+        var canvas = document.getElementById('spores');
+        if (!canvas) return;
+        
+        var ctx = canvas.getContext('2d');
+        var spores = [];
+        var numSpores = 30;
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function createSpore() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                radius: Math.random() * 2 + 1,
+                alpha: Math.random() * 0.5 + 0.2
+            };
+        }
+        
+        function init() {
+            resize();
+            for (var i = 0; i < numSpores; i++) {
+                spores.push(createSpore());
+            }
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (var i = 0; i < spores.length; i++) {
+                var s = spores[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                
+                if (s.x < 0 || s.x > canvas.width) s.vx *= -1;
+                if (s.y < 0 || s.y > canvas.height) s.vy *= -1;
+                
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(143, 227, 136, ' + s.alpha + ')';
+                ctx.fill();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        window.addEventListener('resize', resize);
+        init();
+        animate();
     }
 
     // Public API
@@ -224,7 +321,21 @@ var LumoApp = (function() {
                 initialized: isInitialized,
                 storageReady: LumoStorage.isReady()
             };
-        }
+        },
+
+        /**
+         * Open inspector panel
+         */
+        openInspector: function() {
+            if (shell) {
+                shell.classList.add('insp');
+            }
+        },
+
+        /**
+         * Close inspector panel
+         */
+        closeInspector: closeInspector
     };
 })();
 
