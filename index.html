@@ -3,48 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumo - Personal Productivity App</title>
+    <title>Lumo - Personal Knowledge Evolution Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <h1 class="app-title">Lumo</h1>
+    <!-- Ambient spore canvas -->
+    <canvas id="spores"></canvas>
+    
+    <div id="app">
+        <!-- Topbar -->
+        <header id="topbar">
+            <!-- Brand / Logo -->
+            <div class="brand">
+                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="16" r="14" stroke="var(--leaf)" stroke-width="1.5"/>
+                    <circle cx="16" cy="16" r="6" fill="var(--leaf)" opacity="0.3"/>
+                    <path d="M16 4v4M16 24v4M4 16h4M24 16h4" stroke="var(--leaf)" stroke-width="1.5" opacity="0.5"/>
+                </svg>
+                <div>
+                    <span class="bw">LUMO</span>
+                    <span class="bt">Knowledge Engine</span>
+                </div>
+            </div>
+            
+            <!-- Global semantic search -->
+            <div id="gsearchwrap">
+                <input type="text" id="gsearch" placeholder="Search knowledge..." autocomplete="off">
+            </div>
+            
+            <!-- Right side actions -->
+            <div class="topbar-actions">
+                <button class="btn btn-sm btn-ghost" id="captureBtn" title="Capture">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                </button>
+            </div>
         </header>
-
-        <!-- Main Content Area -->
-        <div class="app-body">
+        
+        <!-- Main Shell -->
+        <div id="shell">
             <!-- Sidebar Navigation -->
-            <aside class="sidebar">
-                <nav class="sidebar-nav">
-                    <ul class="nav-list">
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="dashboard">Dashboard</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="tasks">Tasks</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="goals">Goals</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="habits">Habits</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="calendar">Calendar</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="subjects">Subjects</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="time">Time Tracker</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link" data-module="canvas">Canvas</a></li>
-                    </ul>
+            <aside id="side">
+                <nav class="side-nav">
+                    <div class="navlbl">Modules</div>
+                    
+                    <div class="navitem on" data-module="dashboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <rect x="3" y="3" width="7" height="7" rx="1"/>
+                            <rect x="14" y="3" width="7" height="7" rx="1"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1"/>
+                            <rect x="14" y="14" width="7" height="7" rx="1"/>
+                        </svg>
+                        <span class="nl">Dashboard</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="tasks">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M9 11l3 3L22 4"/>
+                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                        </svg>
+                        <span class="nl">Tasks</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="goals">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <circle cx="12" cy="12" r="9"/>
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 3v9"/>
+                        </svg>
+                        <span class="nl">Goals</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="habits">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                        </svg>
+                        <span class="nl">Habits</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="calendar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/>
+                            <path d="M16 2v4M8 2v4M3 10h18"/>
+                        </svg>
+                        <span class="nl">Calendar</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="subjects">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                        </svg>
+                        <span class="nl">Subjects</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="time">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7v5l3 3"/>
+                        </svg>
+                        <span class="nl">Time Tracker</span>
+                    </div>
+                    
+                    <div class="navitem" data-module="canvas">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <circle cx="15.5" cy="15.5" r="1.5"/>
+                            <path d="M8.5 8.5l7 7"/>
+                        </svg>
+                        <span class="nl">Canvas</span>
+                    </div>
                 </nav>
+                
+                <!-- Stats Grid -->
+                <div class="statrow">
+                    <div class="stat amb">
+                        <b>0</b>
+                        <span>Pending</span>
+                    </div>
+                    <div class="stat lf">
+                        <b>0</b>
+                        <span>Notes</span>
+                    </div>
+                </div>
+                
+                <!-- Sidebar Footer -->
+                <div id="sidefoot">
+                    <span>v1.0.0 &middot; <a href="#" id="aboutLink">About</a></span>
+                </div>
             </aside>
-
-            <!-- Main Workspace -->
-            <main class="main-workspace">
-                <div id="workspace-content" class="workspace-content">
-                    <p class="welcome-message">Select a module from the sidebar to get started.</p>
+            
+            <!-- Main Content Area -->
+            <main id="main">
+                <div id="workspace-content" class="workspace-content rise">
+                    <div class="viewhead">
+                        <span class="eyebrow">Welcome</span>
+                        <h1 class="vt">Personal Knowledge Evolution Engine</h1>
+                        <p class="sub">Select a module from the sidebar to begin exploring your knowledge ecosystem.</p>
+                    </div>
+                    
+                    <div class="panel rise d1">
+                        <div class="lbl">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <circle cx="12" cy="12" r="9"/>
+                                <path d="M12 3v18M3 12h18"/>
+                            </svg>
+                            <span class="leaf">Quick Start</span>
+                        </div>
+                        <p style="color:var(--dim);font-size:13.5px;line-height:1.7;margin-bottom:16px;">
+                            Lumo helps you capture, refine, and connect ideas. Start by capturing thoughts through text or voice, 
+                            then review AI suggestions to build your knowledge graph.
+                        </p>
+                        <div class="chips">
+                            <span class="chip" style="border-color:var(--line);color:var(--dim)">Capture Ideas</span>
+                            <span class="chip" style="border-color:var(--line);color:var(--dim)">Review Suggestions</span>
+                            <span class="chip" style="border-color:var(--line);color:var(--dim)">Explore Graph</span>
+                            <span class="chip" style="border-color:var(--line);color:var(--dim)">Export Knowledge</span>
+                        </div>
+                    </div>
                 </div>
             </main>
+            
+            <!-- Inspector Panel (right side) -->
+            <aside id="inspector">
+                <div class="inshead">
+                    <span class="eyebrow">Inspector</span>
+                    <button class="insclose" id="insClose">&times;</button>
+                </div>
+                <div class="insbody">
+                    <p class="empty">Select an item to view details</p>
+                </div>
+            </aside>
         </div>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <span class="footer-text">&copy; Lumo App</span>
-        </footer>
     </div>
-
+    
+    <!-- Toast Notifications Container -->
+    <div id="toasts"></div>
+    
+    <!-- Print Root (hidden) -->
+    <div id="printroot"></div>
+    
     <!-- Configuration -->
     <script src="js/config.js"></script>
     
