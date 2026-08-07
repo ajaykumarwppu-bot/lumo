@@ -957,6 +957,345 @@ var LumoHabitTracker = (function() {
         },
 
         /**
+         * Show modal to add a good habit
+         */
+        showAddGoodHabit: function() {
+            var name = prompt('Enter good habit name:');
+            if (!name) return;
+            
+            var details = prompt('Enter description (optional):') || '';
+            var repsInput = prompt('How many times per day? (default: 1)', '1');
+            var repetitions = parseInt(repsInput) || 1;
+            
+            try {
+                addGoodHabit(name, details, repetitions);
+                alert('Good habit added successfully!');
+                // Re-render if in app context
+                if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
+                    LumoApp.loadModule('habits');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        },
+
+        /**
+         * Show modal to add a bad habit
+         */
+        showAddBadHabit: function() {
+            var name = prompt('Enter bad habit name:');
+            if (!name) return;
+            
+            var duration = prompt('How long has this been a habit? (e.g., "Since 2 years"):', 'Unknown') || 'Unknown';
+            
+            try {
+                addBadHabit(name, duration);
+                alert('Bad habit added successfully!');
+                // Re-render if in app context
+                if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
+                    LumoApp.loadModule('habits');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        },
+
+        /**
+         * Show challenges view
+         */
+        showChallenges: function() {
+            var html = '<div class="viewhead rise">';
+            html += '<span class="eyebrow">Challenges</span>';
+            html += '<h1 class="vt">Challenge Mode</h1>';
+            html += '<p class="sub">Take on structured challenges to build mental toughness.</p>';
+            html += '</div>';
+
+            if (habitData.activeChallenge) {
+                html += '<div class="panel rise d1" style="margin-bottom:20px;">';
+                html += '<div class="lbl">';
+                html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">';
+                html += '<path d="M6 9H4.5a2.5 2.5 0 010-5H6"/>';
+                html += '<path d="M18 9h1.5a2.5 2.5 0 000-5H18"/>';
+                html += '<path d="M4 22h16"/>';
+                html += '<path d="M10 14.66V18c0 .55-.47.98-.97 1.21C7.85 19.75 6 21.5 6 22"/>';
+                html += '<path d="M14 14.66V18c0 .55.47.98.97 1.21C16.15 19.75 18 21.5 18 22"/>';
+                html += '<path d="M18 2H6v7a6 6 0 0012 0V2z"/>';
+                html += '</svg>';
+                html += '<span class="leaf">Active Challenge</span>';
+                html += '</div>';
+                
+                var challenge = habitData.activeChallenge;
+                var progressPercent = Math.round((challenge.currentStep / challenge.duration) * 100);
+                
+                html += '<div style="margin-top:15px;">';
+                html += '<div style="font-weight:600;font-size:16px;color:var(--fg);">' + escapeHtml(challenge.title) + '</div>';
+                html += '<div style="color:var(--dim);font-size:12.5px;margin-top:4px;">' + escapeHtml(challenge.tagline) + '</div>';
+                
+                html += '<div style="margin-top:15px;">';
+                html += '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:6px;">';
+                html += '<span>Progress: Day ' + challenge.currentStep + ' of ' + challenge.duration + '</span>';
+                html += '<span>' + progressPercent + '%</span>';
+                html += '</div>';
+                html += '<div style="height:8px;background:var(--line);border-radius:4px;overflow:hidden;">';
+                html += '<div style="width:' + progressPercent + '%;height:100%;background:var(--accent);border-radius:4px;"></div>';
+                html += '</div>';
+                html += '</div>';
+                
+                html += '<div style="margin-top:15px;">';
+                html += '<button onclick="LumoHabitTracker.completeChallengeDay()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">Complete Today</button>';
+                html += '<button onclick="LumoHabitTracker.quitChallenge()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;margin-left:10px;">Quit Challenge</button>';
+                html += '</div>';
+                
+                html += '<div style="margin-top:15px;padding-top:15px;border-top:1px solid var(--line);">';
+                html += '<div style="font-size:12.5px;font-weight:600;margin-bottom:8px;">Rules:</div>';
+                html += '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--dim);">';
+                for (var i = 0; i < challenge.rules.length; i++) {
+                    html += '<li style="margin-bottom:4px;">' + escapeHtml(challenge.rules[i]) + '</li>';
+                }
+                html += '</ul>';
+                html += '</div>';
+                
+                html += '</div>';
+                html += '</div>';
+            } else {
+                html += '<div style="margin-bottom:20px;">';
+                html += '<button onclick="LumoHabitTracker.startPredefinedChallenge(\'75hard\')" style="padding:12px 18px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;width:100%;margin-bottom:10px;text-align:left;">';
+                html += '<strong>75 Hard Challenge</strong><br><span style="font-size:12px;opacity:0.9;">Mental Toughness - 75 Days</span>';
+                html += '</button>';
+                
+                html += '<button onclick="LumoHabitTracker.startPredefinedChallenge(\'66day\')" style="padding:12px 18px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;width:100%;margin-bottom:10px;text-align:left;">';
+                html += '<strong>66 Day Challenge</strong><br><span style="font-size:12px;opacity:0.9;">Build a Habit - 66 Days</span>';
+                html += '</button>';
+                
+                html += '<button onclick="LumoHabitTracker.startPredefinedChallenge(\'monkmode\')" style="padding:12px 18px;background:linear-gradient(135deg,#8E2DE2,#4A00E0);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;width:100%;margin-bottom:10px;text-align:left;">';
+                html += '<strong>Monk Mode</strong><br><span style="font-size:12px;opacity:0.9;">Deep Focus - 90 Days</span>';
+                html += '</button>';
+                
+                html += '<button onclick="LumoHabitTracker.startPredefinedChallenge(\'dopaminedetox\')" style="padding:12px 18px;background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;width:100%;text-align:left;">';
+                html += '<strong>Dopamine Detox</strong><br><span style="font-size:12px;opacity:0.9;">24 Hour Reset</span>';
+                html += '</button>';
+                html += '</div>';
+                
+                html += '<div class="panel rise d1">';
+                html += '<div style="font-weight:600;margin-bottom:15px;">Create Custom Challenge</div>';
+                html += '<button onclick="LumoHabitTracker.createCustomChallengeUI()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">+ New Custom Challenge</button>';
+                html += '</div>';
+            }
+
+            // Inject into main content
+            var container = document.getElementById('main-content');
+            if (container) {
+                container.innerHTML = html;
+            }
+        },
+
+        /**
+         * Create custom challenge via prompts
+         */
+        createCustomChallengeUI: function() {
+            var name = prompt('Challenge name:');
+            if (!name) return;
+            
+            var tagline = prompt('Tagline/Purpose (optional):') || '';
+            var durationInput = prompt('Duration (number):', '30');
+            var duration = parseInt(durationInput) || 30;
+            var durationType = prompt('Duration type (Days/Weeks):', 'Days') || 'Days';
+            
+            var rulesText = prompt('Enter rules separated by commas (e.g., "No sugar, Exercise daily, Read 10 pages"):');
+            if (!rulesText) return;
+            
+            var rules = rulesText.split(',').map(function(r) { return r.trim(); }).filter(function(r) { return r; });
+            
+            try {
+                startCustomChallenge(name, tagline, duration, durationType, rules);
+                alert('Custom challenge started!');
+                LumoHabitTracker.showChallenges();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        },
+
+        /**
+         * Show 90-day grid view
+         */
+        show90DayGrid: function() {
+            var html = '<div class="viewhead rise">';
+            html += '<span class="eyebrow">Streak Tracker</span>';
+            html += '<h1 class="vt">90-Day Grid</h1>';
+            html += '<p class="sub">Visual representation of your habit streaks.</p>';
+            html += '</div>';
+
+            if (habitData.goodHabits.length === 0 && habitData.badHabits.length === 0) {
+                html += '<div class="panel rise d1">';
+                html += '<p style="color:var(--dim);">No habits to display. Add some habits first.</p>';
+                html += '</div>';
+            } else {
+                // Good Habits Grid
+                if (habitData.goodHabits.length > 0) {
+                    html += '<div class="panel rise d1" style="margin-bottom:20px;">';
+                    html += '<div class="lbl"><span class="leaf">Good Habits</span></div>';
+                    html += '<div style="margin-top:15px;">';
+                    
+                    for (var i = 0; i < habitData.goodHabits.length; i++) {
+                        var habit = habitData.goodHabits[i];
+                        var grid = generate90DayGrid(habit, true);
+                        
+                        html += '<div style="margin-bottom:20px;">';
+                        html += '<div style="font-weight:600;margin-bottom:10px;">' + escapeHtml(habit.name) + ' (' + habit.repetitions + 'x/day)</div>';
+                        html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">M</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">T</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">W</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">T</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">F</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">S</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">S</div>';
+                        
+                        for (var d = 0; d < grid.days.length; d++) {
+                            var day = grid.days[d];
+                            var color = day.completed ? '#22c55e' : day.isFuture ? 'transparent' : '#ef4444';
+                            var border = day.isFuture ? '1px dashed var(--line)' : 'none';
+                            html += '<div style="aspect-ratio:1;background:' + color + ';border:' + border + ';border-radius:3px;" title="' + day.date + '"></div>';
+                        }
+                        
+                        html += '</div>';
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // Bad Habits Grid
+                if (habitData.badHabits.length > 0) {
+                    html += '<div class="panel rise d1">';
+                    html += '<div class="lbl"><span class="leaf">Bad Habits (Clean Days)</span></div>';
+                    html += '<div style="margin-top:15px;">';
+                    
+                    for (var j = 0; j < habitData.badHabits.length; j++) {
+                        var badHabit = habitData.badHabits[j];
+                        var grid = generate90DayGrid(badHabit, false);
+                        
+                        html += '<div style="margin-bottom:20px;">';
+                        html += '<div style="font-weight:600;margin-bottom:10px;">' + escapeHtml(badHabit.name) + '</div>';
+                        html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">M</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">T</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">W</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">T</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">F</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">S</div>';
+                        html += '<div style="font-size:10px;color:var(--dim);text-align:center;">S</div>';
+                        
+                        for (var k = 0; k < grid.days.length; k++) {
+                            var day = grid.days[k];
+                            var color = day.completed ? '#22c55e' : day.isFuture ? 'transparent' : '#ef4444';
+                            var border = day.isFuture ? '1px dashed var(--line)' : 'none';
+                            html += '<div style="aspect-ratio:1;background:' + color + ';border:' + border + ';border-radius:3px;" title="' + day.date + '"></div>';
+                        }
+                        
+                        html += '</div>';
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                    html += '</div>';
+                }
+            }
+
+            // Back button
+            html += '<div style="margin-top:20px;">';
+            html += '<button onclick="LumoHabitTracker.renderToMain()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">← Back to Dashboard</button>';
+            html += '</div>';
+
+            var container = document.getElementById('main-content');
+            if (container) {
+                container.innerHTML = html;
+            }
+        },
+
+        /**
+         * Render main habit tracker view to DOM
+         */
+        renderToMain: function() {
+            var container = document.getElementById('main-content');
+            if (container) {
+                container.innerHTML = LumoHabitTracker.render();
+            }
+        },
+
+        /**
+         * Log bad habit failure with prompt
+         */
+        logBadHabitFail: function(habitIndex) {
+            var trigger = prompt('What triggered this relapse? (e.g., "Felt bored", "Stress", "Social pressure"):', 'Unknown');
+            if (trigger === null) return; // User cancelled
+            
+            try {
+                logBadHabit(habitIndex, trigger || 'Unknown');
+                alert('Failure logged. Stay strong!');
+                LumoHabitTracker.renderToMain();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        },
+
+        /**
+         * Edit good habit with prompts
+         */
+        editGoodHabitUI: function(habitIndex) {
+            var habit = habitData.goodHabits[habitIndex];
+            if (!habit) return;
+            
+            var newName = prompt('Habit name:', habit.name);
+            if (!newName) return;
+            
+            var newDetails = prompt('Description:', habit.details);
+            var newRepsInput = prompt('Repetitions per day:', habit.repetitions);
+            var newReps = parseInt(newRepsInput) || habit.repetitions;
+            
+            var changes = {
+                name: newName,
+                details: newDetails || '',
+                repetitions: newReps
+            };
+            
+            try {
+                editGoodHabit(habitIndex, changes);
+                alert('Habit updated!');
+                LumoHabitTracker.renderToMain();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        },
+
+        /**
+         * Edit bad habit with prompts
+         */
+        editBadHabitUI: function(habitIndex) {
+            var habit = habitData.badHabits[habitIndex];
+            if (!habit) return;
+            
+            var newName = prompt('Habit name:', habit.name);
+            if (!newName) return;
+            
+            var newDuration = prompt('Duration info:', habit.duration);
+            
+            var changes = {
+                name: newName,
+                duration: newDuration || habit.duration
+            };
+            
+            try {
+                editBadHabit(habitIndex, changes);
+                alert('Habit updated!');
+                LumoHabitTracker.renderToMain();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        },
+
+        /**
          * Render the habit tracker UI
          * @returns {string} HTML content for the habit tracker module
          */
@@ -1049,7 +1388,7 @@ var LumoHabitTracker = (function() {
                     }
                     html += '<div style="margin-top:8px;">';
                     html += '<button onclick="LumoHabitTracker.logGoodHabit(' + i + ')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11.5px;margin-right:6px;">Log Completion</button>';
-                    html += '<button onclick="LumoHabitTracker.editGoodHabit(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;">Edit</button>';
+                    html += '<button onclick="LumoHabitTracker.editGoodHabitUI(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;">Edit</button>';
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
@@ -1121,7 +1460,7 @@ var LumoHabitTracker = (function() {
                     if (!failed) {
                         html += '<button onclick="LumoHabitTracker.logBadHabitFail(' + i + ')" style="padding:6px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11.5px;">Log Failure</button>';
                     }
-                    html += '<button onclick="LumoHabitTracker.editBadHabit(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;margin-left:6px;">Edit</button>';
+                    html += '<button onclick="LumoHabitTracker.editBadHabitUI(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;margin-left:6px;">Edit</button>';
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
