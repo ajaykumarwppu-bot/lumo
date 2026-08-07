@@ -1697,8 +1697,8 @@ var LumoHabitTracker = (function() {
             html += '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
             html += '<button onclick="LumoHabitTracker.showAddGoodHabit()" style="padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">+ Add Good Habit</button>';
             html += '<button onclick="LumoHabitTracker.showAddBadHabit()" style="padding:10px 16px;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">+ Add Bad Habit</button>';
+            html += '<button onclick="LumoHabitTracker.showAddChallenge()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">+ Add Challenge</button>';
             html += '<button onclick="LumoHabitTracker.showChallenges()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">View Challenges</button>';
-            html += '<button onclick="LumoHabitTracker.show90DayGrid()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">90-Day Grid</button>';
             html += '</div>';
             html += '</div>';
 
@@ -1725,6 +1725,7 @@ var LumoHabitTracker = (function() {
                     var entries = habit.history[today] || [];
                     var completed = entries.length >= habit.repetitions;
                     var streak = calculateGoodStreak(habit.history, habit.repetitions, habit.start);
+                    var progressPercent = Math.min(100, Math.round((entries.length / habit.repetitions) * 100));
                     
                     html += '<div style="border:1px solid var(--line);border-radius:8px;padding:10px;">';
                     html += '<div style="display:flex;justify-content:space-between;align-items:start;">';
@@ -1736,6 +1737,11 @@ var LumoHabitTracker = (function() {
                     html += '<div style="color:var(--dim);font-size:10.5px;margin-top:4px;">';
                     html += habit.repetitions + 'x/day &middot; Streak: <strong style="color:var(--accent);">' + streak + 'd</strong>';
                     html += '</div>';
+                    // Progress bar
+                    html += '<div style="margin-top:8px;height:6px;background:var(--line);border-radius:3px;overflow:hidden;">';
+                    html += '<div style="width:' + progressPercent + '%;height:100%;background:' + (completed ? '#22c55e' : 'var(--accent)') + ';border-radius:3px;transition:width 0.3s;"></div>';
+                    html += '</div>';
+                    html += '<div style="color:var(--dim);font-size:9px;margin-top:3px;">' + entries.length + '/' + habit.repetitions + ' completed</div>';
                     html += '</div>';
                     html += '<div style="text-align:right;">';
                     if (completed) {
@@ -1746,6 +1752,7 @@ var LumoHabitTracker = (function() {
                     html += '<div style="margin-top:4px;">';
                     html += '<button onclick="LumoHabitTracker.logGoodHabit(' + i + ')" style="padding:4px 8px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px;">Log</button>';
                     html += '<button onclick="LumoHabitTracker.editGoodHabitUI(' + i + ')" style="padding:4px 8px;background:var(--line);color:var(--fg);border:none;border-radius:4px;cursor:pointer;font-size:10px;margin-left:3px;">Edit</button>';
+                    html += '<button onclick="LumoHabitTracker.deleteGoodHabitUI(' + i + ')" style="padding:4px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px;margin-left:3px;">Delete</button>';
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
@@ -1777,6 +1784,7 @@ var LumoHabitTracker = (function() {
                     var failed = dayData && dayData.fails && dayData.fails.length > 0;
                     var isProtected = dayData && dayData.protected;
                     var streak = calculateBadStreak(badHabit.history, badHabit.createdAt);
+                    var failCount = dayData && dayData.fails ? dayData.fails.length : 0;
                     
                     html += '<div style="border:1px solid var(--line);border-radius:8px;padding:10px;">';
                     html += '<div style="display:flex;justify-content:space-between;align-items:start;">';
@@ -1788,6 +1796,7 @@ var LumoHabitTracker = (function() {
                     html += '<div style="color:var(--dim);font-size:10.5px;margin-top:4px;">';
                     html += 'Clean: <strong style="color:#22c55e;">' + streak + 'd</strong>';
                     html += '</div>';
+                    html += '<div style="color:' + (failCount > 0 ? '#ef4444' : 'var(--dim)') + ';font-size:9px;margin-top:3px;">' + failCount + ' Failed Today</div>';
                     html += '</div>';
                     html += '<div style="text-align:right;">';
                     if (isProtected) {
@@ -1805,6 +1814,7 @@ var LumoHabitTracker = (function() {
                         html += '<button onclick="LumoHabitTracker.logBadHabitFail(' + i + ')" style="padding:4px 6px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:9px;margin-left:3px;">Log</button>';
                     }
                     html += '<button onclick="LumoHabitTracker.editBadHabitUI(' + i + ')" style="padding:4px 6px;background:var(--line);color:var(--fg);border:none;border-radius:4px;cursor:pointer;font-size:9px;margin-left:3px;">Edit</button>';
+                    html += '<button onclick="LumoHabitTracker.deleteBadHabitUI(' + i + ')" style="padding:4px 6px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:9px;margin-left:3px;">Delete</button>';
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
@@ -1816,67 +1826,8 @@ var LumoHabitTracker = (function() {
             
             html += '</div>'; // End grid container
             
-            if (habitData.badHabits.length === 0) {
-                html += '<p style="color:var(--dim);font-size:13.5px;line-height:1.7;">No bad habits being tracked. Use this to monitor and reduce negative patterns.</p>';
-            } else {
-                html += '<div style="display:grid;gap:12px;margin-top:15px;">';
-                for (var i = 0; i < habitData.badHabits.length; i++) {
-                    var badHabit = habitData.badHabits[i];
-                    var today = new Date().toISOString().split('T')[0];
-                    var dayData = badHabit.history[today];
-                    var failed = dayData && dayData.fails && dayData.fails.length > 0;
-                    var isProtected = dayData && dayData.protected;
-                    var streak = calculateBadStreak(badHabit.history, badHabit.createdAt);
-                    
-                    html += '<div style="border:1px solid var(--line);border-radius:10px;padding:15px;">';
-                    html += '<div style="display:flex;justify-content:space-between;align-items:start;">';
-                    html += '<div style="flex:1;">';
-                    html += '<div style="font-weight:600;color:var(--fg);">' + escapeHtml(badHabit.name) + '</div>';
-                    if (badHabit.duration) {
-                        html += '<div style="color:var(--dim);font-size:12.5px;margin-top:4px;">Duration: ' + escapeHtml(badHabit.duration) + '</div>';
-                    }
-                    html += '<div style="color:var(--dim);font-size:12px;margin-top:6px;">';
-                    html += 'Clean streak: <strong style="color:#22c55e;">' + streak + ' days</strong>';
-                    html += '</div>';
-                    html += '</div>';
-                    html += '<div style="text-align:right;">';
-                    if (isProtected) {
-                        html += '<div style="color:#22c55e;font-size:12px;font-weight:600;">🛡️ Protected</div>';
-                    } else if (failed) {
-                        html += '<div style="color:#ef4444;font-size:12px;font-weight:600;">✗ Failed today</div>';
-                    } else {
-                        html += '<div style="color:#22c55e;font-size:12px;font-weight:600;">✓ Clean today</div>';
-                    }
-                    html += '<div style="margin-top:8px;">';
-                    if (!isProtected && !failed) {
-                        html += '<button onclick="LumoHabitTracker.activateShield(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;margin-right:6px;">🛡️ Shield</button>';
-                    }
-                    if (!failed) {
-                        html += '<button onclick="LumoHabitTracker.logBadHabitFail(' + i + ')" style="padding:6px 12px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11.5px;">Log Failure</button>';
-                    }
-                    html += '<button onclick="LumoHabitTracker.editBadHabitUI(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;margin-left:6px;">Edit</button>';
-                    html += '</div>';
-                    html += '</div>';
-                    html += '</div>';
-                    
-                    // Show today's failures
-                    if (dayData && dayData.fails && dayData.fails.length > 0) {
-                        html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);">';
-                        html += '<div style="font-size:11.5px;color:var(--dim);margin-bottom:6px;">Today\'s failures:</div>';
-                        for (var j = 0; j < dayData.fails.length; j++) {
-                            var fail = dayData.fails[j];
-                            html += '<div style="background:#fef2f2;padding:8px 10px;border-radius:6px;font-size:11.5px;color:#dc2626;margin-bottom:6px;">';
-                            html += '<strong>' + fail.time + '</strong> - ' + escapeHtml(fail.trigger || 'No trigger logged') + '</div>';
-                        }
-                        html += '</div>';
-                    }
-                    
-                    html += '</div>';
-                }
-                html += '</div>';
-            }
-            html += '</div>';
-
+            // Remove the duplicate bad habits section (lines 1829-1888)
+            
             // Active Challenge Section
             if (habitData.activeChallenge) {
                 html += '<div class="panel rise d1" style="margin-bottom:20px;">';
