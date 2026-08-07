@@ -12,6 +12,7 @@ var LumoHabitTracker = (function() {
     var isInitialized = false;
     var habitData = null;
     var storageKey = 'habit_tracker_data';
+    var modalContainer = null;
 
     // Predefined challenges
     var predefinedChallenges = {
@@ -366,6 +367,82 @@ var LumoHabitTracker = (function() {
             .replace(/'/g, '&#039;');
     }
 
+    /**
+     * Create custom modal popup
+     * @private
+     * @param {string} title - Modal title
+     * @param {string} content - Modal HTML content
+     * @param {function} onSave - Save callback function
+     */
+    function createModal(title, content, onSave) {
+        removeModal();
+        
+        var modalContainer = document.createElement('div');
+        modalContainer.id = 'lumo-modal-overlay';
+        modalContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+        
+        var modalBox = document.createElement('div');
+        modalBox.className = 'rise';
+        modalBox.style.cssText = 'background:var(--bg-secondary);border-radius:16px;padding:24px;width:90%;max-width:450px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+        
+        var header = document.createElement('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;';
+        header.innerHTML = '<h3 style="margin:0;font-size:18px;color:var(--fg);">' + escapeHtml(title) + '</h3>';
+        
+        var closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.cssText = 'background:none;border:none;font-size:24px;color:var(--dim);cursor:pointer;padding:0;line-height:1;';
+        closeBtn.onclick = removeModal;
+        header.appendChild(closeBtn);
+        
+        var contentDiv = document.createElement('div');
+        contentDiv.innerHTML = content;
+        contentDiv.style.cssText = 'margin-bottom:20px;';
+        
+        var footer = document.createElement('div');
+        footer.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;';
+        
+        var cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.cssText = 'padding:10px 20px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:14px;';
+        cancelBtn.onclick = removeModal;
+        
+        var saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.style.cssText = 'padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;';
+        saveBtn.onclick = function() {
+            if (onSave && onSave()) {
+                removeModal();
+            }
+        };
+        
+        footer.appendChild(cancelBtn);
+        footer.appendChild(saveBtn);
+        
+        modalBox.appendChild(header);
+        modalBox.appendChild(contentDiv);
+        modalBox.appendChild(footer);
+        modalContainer.appendChild(modalBox);
+        document.body.appendChild(modalContainer);
+        
+        setTimeout(function() {
+            var firstInput = modalBox.querySelector('input, select, textarea');
+            if (firstInput) firstInput.focus();
+        }, 100);
+    }
+    
+    function removeModal() {
+        var modal = document.getElementById('lumo-modal-overlay');
+        if (modal) {
+            document.body.removeChild(modal);
+        }
+    }
+    
+    function getModalInput(id) {
+        var el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    }
+
     // ==================== PUBLIC API ====================
 
     return {
@@ -457,7 +534,7 @@ var LumoHabitTracker = (function() {
         },
 
         /**
-         * Log completion of a good habit
+         * Log completion of a good habit and re-render UI
          * @param {number} habitIndex - Index of the habit in goodHabits array
          * @returns {boolean} True if logged successfully
          */
@@ -480,6 +557,10 @@ var LumoHabitTracker = (function() {
             saveData();
 
             console.log('[HabitTracker] Logged good habit:', habit.name, 'at', time);
+            
+            // Re-render UI after logging
+            LumoHabitTracker.renderToMain();
+            
             return true;
         },
 
@@ -519,7 +600,7 @@ var LumoHabitTracker = (function() {
         },
 
         /**
-         * Activate shield protection for a bad habit
+         * Activate shield protection for a bad habit and re-render UI
          * @param {number} habitIndex - Index of the habit in badHabits array
          * @returns {boolean} True if activated successfully
          */
@@ -543,6 +624,10 @@ var LumoHabitTracker = (function() {
 
             saveData();
             console.log('[HabitTracker] Shield activated for:', habit.name);
+            
+            // Re-render UI after activating shield
+            LumoHabitTracker.renderToMain();
+            
             return true;
         },
 
@@ -621,6 +706,50 @@ var LumoHabitTracker = (function() {
             }
 
             return true;
+        },
+
+        /**
+         * Delete a good habit with confirmation modal
+         * @param {number} habitIndex - Index of the habit
+         */
+        deleteGoodHabitUI: function(habitIndex) {
+            var habit = habitData.goodHabits[habitIndex];
+            if (!habit) return;
+            
+            var content = '<div style="color:var(--dim);font-size:14px;">Are you sure you want to delete "<strong>' + escapeHtml(habit.name) + '</strong>"? This will move it to deleted habits.</div>';
+            
+            createModal('Delete Good Habit', content, function() {
+                try {
+                    LumoHabitTracker.deleteGoodHabit(habitIndex);
+                    LumoHabitTracker.renderToMain();
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
+        },
+
+        /**
+         * Delete a bad habit with confirmation modal
+         * @param {number} habitIndex - Index of the habit
+         */
+        deleteBadHabitUI: function(habitIndex) {
+            var habit = habitData.badHabits[habitIndex];
+            if (!habit) return;
+            
+            var content = '<div style="color:var(--dim);font-size:14px;">Are you sure you want to delete "<strong>' + escapeHtml(habit.name) + '</strong>"? This will move it to deleted habits.</div>';
+            
+            createModal('Delete Bad Habit', content, function() {
+                try {
+                    LumoHabitTracker.deleteBadHabit(habitIndex);
+                    LumoHabitTracker.renderToMain();
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
         },
 
         /**
@@ -976,48 +1105,123 @@ var LumoHabitTracker = (function() {
          * Show modal to add a good habit
          */
         showAddGoodHabit: function() {
-            var name = prompt('Enter good habit name:');
-            if (!name) return;
+            var today = getDateString();
+            var content = '<div style="display:flex;flex-direction:column;gap:15px;">' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Habit Name *</label>' +
+                '<input type="text" id="goodHabitName" placeholder="e.g., Morning Exercise" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Description</label>' +
+                '<textarea id="goodHabitDetails" placeholder="Optional details about your habit" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;resize:none;box-sizing:border-box;"></textarea>' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Start Date</label>' +
+                '<input type="date" id="goodHabitStartDate" value="' + today + '" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Repetitions per Day</label>' +
+                '<select id="goodHabitReps" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '<option value="1">1 time</option>' +
+                '<option value="2">2 times</option>' +
+                '<option value="3">3 times</option>' +
+                '<option value="4">4 times</option>' +
+                '<option value="5">5 times</option>' +
+                '<option value="custom">Custom</option>' +
+                '</select>' +
+                '</div>' +
+                '<div id="customRepsDiv" style="display:none;">' +
+                '<input type="number" id="goodHabitRepsCustom" min="1" max="20" placeholder="Enter custom number" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '</div>';
             
-            var details = prompt('Enter description (optional):') || '';
-            var repsInput = prompt('How many times per day? (default: 1)', '1');
-            var repetitions = parseInt(repsInput) || 1;
-            
-            try {
-                LumoHabitTracker.addGoodHabit(name, details, repetitions);
-                alert('Good habit added successfully!');
-                // Re-render if in app context
-                if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
-                    LumoApp.loadModule('habits');
-                } else {
-                    LumoHabitTracker.renderToMain();
+            createModal('Add Good Habit', content, function() {
+                var name = getModalInput('goodHabitName');
+                if (!name) {
+                    alert('Please enter a habit name');
+                    return false;
                 }
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+                
+                var details = getModalInput('goodHabitDetails');
+                var startDate = document.getElementById('goodHabitStartDate').value || today;
+                var repsSelect = document.getElementById('goodHabitReps').value;
+                var repetitions = repsSelect === 'custom' ? 
+                    (parseInt(document.getElementById('goodHabitRepsCustom').value) || 1) : 
+                    parseInt(repsSelect);
+                
+                try {
+                    LumoHabitTracker.addGoodHabit(name, details, repetitions, startDate);
+                    if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
+                        LumoApp.loadModule('habits');
+                    } else {
+                        LumoHabitTracker.renderToMain();
+                    }
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
+            
+            // Add event listener for custom reps toggle
+            setTimeout(function() {
+                var repsSelect = document.getElementById('goodHabitReps');
+                var customDiv = document.getElementById('customRepsDiv');
+                if (repsSelect && customDiv) {
+                    repsSelect.onchange = function() {
+                        customDiv.style.display = this.value === 'custom' ? 'block' : 'none';
+                        if (this.value === 'custom') {
+                            document.getElementById('goodHabitRepsCustom').focus();
+                        }
+                    };
+                }
+            }, 100);
         },
 
         /**
          * Show modal to add a bad habit
          */
         showAddBadHabit: function() {
-            var name = prompt('Enter bad habit name:');
-            if (!name) return;
+            var today = getDateString();
+            var content = '<div style="display:flex;flex-direction:column;gap:15px;">' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Habit Name *</label>' +
+                '<input type="text" id="badHabitName" placeholder="e.g., Smoking" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">How many years has this habit existed?</label>' +
+                '<input type="number" id="badHabitYears" min="0" max="100" placeholder="e.g., 2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Start Date</label>' +
+                '<input type="date" id="badHabitStartDate" value="' + today + '" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '</div>';
             
-            var duration = prompt('How long has this been a habit? (e.g., "Since 2 years"):', 'Unknown') || 'Unknown';
-            
-            try {
-                LumoHabitTracker.addBadHabit(name, duration);
-                alert('Bad habit added successfully!');
-                // Re-render if in app context
-                if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
-                    LumoApp.loadModule('habits');
-                } else {
-                    LumoHabitTracker.renderToMain();
+            createModal('Add Bad Habit', content, function() {
+                var name = getModalInput('badHabitName');
+                if (!name) {
+                    alert('Please enter a habit name');
+                    return false;
                 }
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+                
+                var years = document.getElementById('badHabitYears').value;
+                var duration = years ? 'Since ' + years + ' year' + (years != 1 ? 's' : '') : 'Unknown';
+                var startDate = document.getElementById('badHabitStartDate').value || today;
+                
+                try {
+                    LumoHabitTracker.addBadHabit(name, duration, startDate);
+                    if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
+                        LumoApp.loadModule('habits');
+                    } else {
+                        LumoHabitTracker.renderToMain();
+                    }
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
         },
 
         /**
@@ -1098,7 +1302,7 @@ var LumoHabitTracker = (function() {
                 
                 html += '<div class="panel rise d1">';
                 html += '<div style="font-weight:600;margin-bottom:15px;">Create Custom Challenge</div>';
-                html += '<button onclick="LumoHabitTracker.createCustomChallengeUI()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">+ New Custom Challenge</button>';
+                html += '<button onclick="LumoHabitTracker.showAddChallenge()" style="padding:10px 16px;background:var(--line);color:var(--fg);border:none;border-radius:8px;cursor:pointer;font-size:13px;">+ Add Challenge</button>';
                 html += '</div>';
             }
 
@@ -1110,29 +1314,109 @@ var LumoHabitTracker = (function() {
         },
 
         /**
-         * Create custom challenge via prompts
+         * Show Add Challenge modal
+         */
+        showAddChallenge: function() {
+            var today = getDateString();
+            var content = '<div style="display:flex;flex-direction:column;gap:15px;">' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Challenge Name *</label>' +
+                '<input type="text" id="challengeName" placeholder="e.g., No Sugar Challenge" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Purpose / Tagline</label>' +
+                '<input type="text" id="challengeTagline" placeholder="e.g., Break free from sugar addiction" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Duration (days)</label>' +
+                '<input type="number" id="challengeDuration" min="1" max="365" value="30" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Start Date</label>' +
+                '<input type="date" id="challengeStartDate" value="' + today + '" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Rules (add multiple)</label>' +
+                '<div id="rulesContainer" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+                '<button onclick="LumoHabitTracker.addRuleField()" style="margin-top:8px;padding:8px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;">+ Add Rule</button>' +
+                '</div>' +
+                '</div>';
+            
+            createModal('Add Challenge', content, function() {
+                var name = getModalInput('challengeName');
+                if (!name) {
+                    alert('Please enter a challenge name');
+                    return false;
+                }
+                
+                var tagline = getModalInput('challengeTagline');
+                var duration = parseInt(document.getElementById('challengeDuration').value) || 30;
+                var startDate = document.getElementById('challengeStartDate').value || today;
+                
+                // Collect rules
+                var rules = [];
+                var ruleInputs = document.querySelectorAll('.rule-input');
+                for (var i = 0; i < ruleInputs.length; i++) {
+                    var rule = ruleInputs[i].value.trim();
+                    if (rule) rules.push(rule);
+                }
+                
+                if (rules.length === 0) {
+                    alert('Please add at least one rule');
+                    return false;
+                }
+                
+                try {
+                    LumoHabitTracker.startCustomChallenge(name, tagline, duration, 'Days', rules);
+                    LumoHabitTracker.showChallenges();
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
+            
+            // Add initial rule field
+            setTimeout(function() {
+                LumoHabitTracker.addRuleField();
+            }, 100);
+        },
+        
+        /**
+         * Add a rule input field
+         */
+        addRuleField: function() {
+            var container = document.getElementById('rulesContainer');
+            if (!container) return;
+            
+            var ruleNum = container.children.length + 1;
+            var ruleDiv = document.createElement('div');
+            ruleDiv.style.cssText = 'display:flex;gap:8px;align-items:center;';
+            ruleDiv.innerHTML = '<span style="font-size:12px;color:var(--dim);min-width:20px;">' + ruleNum + '.</span>' +
+                '<input type="text" class="rule-input" placeholder="e.g., No processed sugar" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font-size:13px;">' +
+                '<button onclick="this.parentElement.remove();LumoHabitTracker.renumberRules()" style="padding:4px 8px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;">&times;</button>';
+            container.appendChild(ruleDiv);
+        },
+        
+        /**
+         * Renumber rules after deletion
+         */
+        renumberRules: function() {
+            var container = document.getElementById('rulesContainer');
+            if (!container) return;
+            
+            var ruleInputs = container.querySelectorAll('.rule-input');
+            for (var i = 0; i < ruleInputs.length; i++) {
+                var span = ruleInputs[i].previousElementSibling;
+                if (span) span.textContent = (i + 1) + '.';
+            }
+        },
+
+        /**
+         * Create custom challenge via prompts (legacy)
          */
         createCustomChallengeUI: function() {
-            var name = prompt('Challenge name:');
-            if (!name) return;
-            
-            var tagline = prompt('Tagline/Purpose (optional):') || '';
-            var durationInput = prompt('Duration (number):', '30');
-            var duration = parseInt(durationInput) || 30;
-            var durationType = prompt('Duration type (Days/Weeks):', 'Days') || 'Days';
-            
-            var rulesText = prompt('Enter rules separated by commas (e.g., "No sugar, Exercise daily, Read 10 pages"):');
-            if (!rulesText) return;
-            
-            var rules = rulesText.split(',').map(function(r) { return r.trim(); }).filter(function(r) { return r; });
-            
-            try {
-                startCustomChallenge(name, tagline, duration, durationType, rules);
-                alert('Custom challenge started!');
-                LumoHabitTracker.showChallenges();
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+            LumoHabitTracker.showAddChallenge();
         },
 
         /**
@@ -1245,74 +1529,124 @@ var LumoHabitTracker = (function() {
         },
 
         /**
-         * Log bad habit failure with prompt
+         * Log bad habit failure with custom modal
          */
         logBadHabitFail: function(habitIndex) {
-            var trigger = prompt('What triggered this relapse? (e.g., "Felt bored", "Stress", "Social pressure"):', 'Unknown');
-            if (trigger === null) return; // User cancelled
+            var content = '<div style="display:flex;flex-direction:column;gap:15px;">' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Trigger / What caused this relapse?</label>' +
+                '<textarea id="badHabitTrigger" placeholder="e.g., Felt stressed, Saw a friend smoking, Boredom" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;resize:none;box-sizing:border-box;"></textarea>' +
+                '</div>' +
+                '</div>';
             
-            try {
-                LumoHabitTracker.logBadHabit(habitIndex, trigger || 'Unknown');
-                alert('Failure logged. Stay strong!');
-                LumoHabitTracker.renderToMain();
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+            createModal('Log Relapse', content, function() {
+                var trigger = document.getElementById('badHabitTrigger').value.trim() || 'Unknown';
+                
+                try {
+                    LumoHabitTracker.logBadHabit(habitIndex, trigger);
+                    LumoHabitTracker.renderToMain();
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
         },
 
         /**
-         * Edit good habit with prompts
+         * Edit good habit with custom modal
          */
         editGoodHabitUI: function(habitIndex) {
             var habit = habitData.goodHabits[habitIndex];
             if (!habit) return;
             
-            var newName = prompt('Habit name:', habit.name);
-            if (!newName) return;
+            var content = '<div style="display:flex;flex-direction:column;gap:15px;">' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Habit Name *</label>' +
+                '<input type="text" id="editGoodHabitName" value="' + escapeHtml(habit.name) + '" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Description</label>' +
+                '<textarea id="editGoodHabitDetails" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;resize:none;box-sizing:border-box;">' + escapeHtml(habit.details) + '</textarea>' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Repetitions per Day</label>' +
+                '<input type="number" id="editGoodHabitReps" min="1" max="20" value="' + habit.repetitions + '" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '</div>';
             
-            var newDetails = prompt('Description:', habit.details);
-            var newRepsInput = prompt('Repetitions per day:', habit.repetitions);
-            var newReps = parseInt(newRepsInput) || habit.repetitions;
-            
-            var changes = {
-                name: newName,
-                details: newDetails || '',
-                repetitions: newReps
-            };
-            
-            try {
-                LumoHabitTracker.editGoodHabit(habitIndex, changes);
-                alert('Habit updated!');
-                LumoHabitTracker.renderToMain();
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+            createModal('Edit Good Habit', content, function() {
+                var newName = getModalInput('editGoodHabitName');
+                if (!newName) {
+                    alert('Please enter a habit name');
+                    return false;
+                }
+                
+                var newDetails = getModalInput('editGoodHabitDetails');
+                var newReps = parseInt(document.getElementById('editGoodHabitReps').value) || 1;
+                
+                var changes = {
+                    name: newName,
+                    details: newDetails,
+                    repetitions: newReps
+                };
+                
+                try {
+                    LumoHabitTracker.editGoodHabit(habitIndex, changes);
+                    LumoHabitTracker.renderToMain();
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
         },
 
         /**
-         * Edit bad habit with prompts
+         * Edit bad habit with custom modal
          */
         editBadHabitUI: function(habitIndex) {
             var habit = habitData.badHabits[habitIndex];
             if (!habit) return;
             
-            var newName = prompt('Habit name:', habit.name);
-            if (!newName) return;
+            var yearsMatch = habit.duration.match(/Since (\d+) year/);
+            var yearsValue = yearsMatch ? yearsMatch[1] : '';
             
-            var newDuration = prompt('Duration info:', habit.duration);
+            var content = '<div style="display:flex;flex-direction:column;gap:15px;">' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">Habit Name *</label>' +
+                '<input type="text" id="editBadHabitName" value="' + escapeHtml(habit.name) + '" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '<div>' +
+                '<label style="display:block;font-size:13px;color:var(--dim);margin-bottom:6px;">How many years has this habit existed?</label>' +
+                '<input type="number" id="editBadHabitYears" min="0" max="100" value="' + yearsValue + '" placeholder="e.g., 2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;box-sizing:border-box;">' +
+                '</div>' +
+                '</div>';
             
-            var changes = {
-                name: newName,
-                duration: newDuration || habit.duration
-            };
-            
-            try {
-                LumoHabitTracker.editBadHabit(habitIndex, changes);
-                alert('Habit updated!');
-                LumoHabitTracker.renderToMain();
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+            createModal('Edit Bad Habit', content, function() {
+                var newName = getModalInput('editBadHabitName');
+                if (!newName) {
+                    alert('Please enter a habit name');
+                    return false;
+                }
+                
+                var years = document.getElementById('editBadHabitYears').value;
+                var newDuration = years ? 'Since ' + years + ' year' + (years != 1 ? 's' : '') : 'Unknown';
+                
+                var changes = {
+                    name: newName,
+                    duration: newDuration
+                };
+                
+                try {
+                    LumoHabitTracker.editBadHabit(habitIndex, changes);
+                    LumoHabitTracker.renderToMain();
+                    return true;
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                    return false;
+                }
+            });
         },
 
         /**
