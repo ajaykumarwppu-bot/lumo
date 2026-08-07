@@ -930,7 +930,7 @@ var LumoHabitTracker = (function() {
                 var badHabit = habitData.badHabits[j];
                 var dayData = badHabit.history[today];
                 var failed = dayData && dayData.fails && dayData.fails.length > 0;
-                var protected = dayData && dayData.protected;
+                var isProtected = dayData && dayData.protected;
 
                 if (failed) {
                     summary.badHabitsFailed++;
@@ -939,7 +939,7 @@ var LumoHabitTracker = (function() {
                 summary.badHabitDetails.push({
                     name: badHabit.name,
                     failed: failed,
-                    protected: protected,
+                    protected: isProtected,
                     failCount: dayData ? dayData.fails.length : 0
                 });
             }
