@@ -147,11 +147,19 @@ var LumoApp = (function() {
         
         console.log('[Lumo] Module requested:', moduleName);
         
-        // Placeholder: Just show module name in workspace
-        // Actual module loading will be implemented later
-        if (workspaceContent) {
+        // Check if module has a render function
+        var moduleContent = '';
+        
+        // Habit Tracker Module Integration
+        if (moduleName === 'habits' && typeof LumoHabitTracker !== 'undefined') {
+            if (!LumoHabitTracker.isReady()) {
+                LumoHabitTracker.init();
+            }
+            moduleContent = LumoHabitTracker.render();
+        } else {
+            // Placeholder for other modules
             var capitalized = capitalizeFirstLetter(moduleName);
-            workspaceContent.innerHTML = 
+            moduleContent = 
                 '<div class="viewhead rise">' +
                     '<span class="eyebrow">Module</span>' +
                     '<h1 class="vt">' + capitalized + '</h1>' +
@@ -170,6 +178,11 @@ var LumoApp = (function() {
                         'Full functionality will be implemented soon.' +
                     '</p>' +
                 '</div>';
+        }
+        
+        // Render the module content
+        if (workspaceContent) {
+            workspaceContent.innerHTML = moduleContent;
         }
 
         // Store current module in history
