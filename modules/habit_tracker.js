@@ -350,6 +350,22 @@ var LumoHabitTracker = (function() {
         saveData();
     }
 
+    /**
+     * Escape HTML special characters
+     * @private
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string
+     */
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     // ==================== PUBLIC API ====================
 
     return {
@@ -1232,7 +1248,7 @@ var LumoHabitTracker = (function() {
             if (trigger === null) return; // User cancelled
             
             try {
-                logBadHabit(habitIndex, trigger || 'Unknown');
+                LumoHabitTracker.logBadHabit(habitIndex, trigger || 'Unknown');
                 alert('Failure logged. Stay strong!');
                 LumoHabitTracker.renderToMain();
             } catch (e) {
@@ -1261,7 +1277,7 @@ var LumoHabitTracker = (function() {
             };
             
             try {
-                editGoodHabit(habitIndex, changes);
+                LumoHabitTracker.editGoodHabit(habitIndex, changes);
                 alert('Habit updated!');
                 LumoHabitTracker.renderToMain();
             } catch (e) {
@@ -1287,7 +1303,7 @@ var LumoHabitTracker = (function() {
             };
             
             try {
-                editBadHabit(habitIndex, changes);
+                LumoHabitTracker.editBadHabit(habitIndex, changes);
                 alert('Habit updated!');
                 LumoHabitTracker.renderToMain();
             } catch (e) {
@@ -1316,8 +1332,8 @@ var LumoHabitTracker = (function() {
             html += '<p class="sub">Track your habits, build discipline, and complete challenges.</p>';
             html += '</div>';
 
-            // Discipline Score Card
-            html += '<div class="panel rise d1" style="margin-bottom:20px;">';
+            // Discipline Score Card - Reduced height
+            html += '<div class="panel rise d1" style="margin-bottom:20px;padding:15px;">';
             html += '<div class="lbl">';
             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">';
             html += '<circle cx="12" cy="12" r="9"/>';
@@ -1325,13 +1341,13 @@ var LumoHabitTracker = (function() {
             html += '</svg>';
             html += '<span class="leaf">Discipline Score</span>';
             html += '</div>';
-            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:15px;">';
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">';
             html += '<div style="flex:1;">';
-            html += '<div style="font-size:36px;font-weight:bold;color:' + scoreColor + ';">' + Math.round(score) + '%</div>';
-            html += '<div style="color:var(--dim);font-size:13px;margin-top:5px;">Current discipline level</div>';
+            html += '<div style="font-size:28px;font-weight:bold;color:' + scoreColor + ';">' + Math.round(score) + '%</div>';
+            html += '<div style="color:var(--dim);font-size:12px;margin-top:3px;">Current discipline level</div>';
             html += '</div>';
-            html += '<div style="width:120px;height:120px;border-radius:50%;border:8px solid ' + scoreColor + ';display:flex;align-items:center;justify-content:center;">';
-            html += '<svg viewBox="0 0 24 24" width="60" height="60" stroke="' + scoreColor + '" fill="none" stroke-width="1.5">';
+            html += '<div style="width:70px;height:70px;border-radius:50%;border:6px solid ' + scoreColor + ';display:flex;align-items:center;justify-content:center;">';
+            html += '<svg viewBox="0 0 24 24" width="35" height="35" stroke="' + scoreColor + '" fill="none" stroke-width="1.5">';
             html += '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>';
             html += '</svg>';
             html += '</div>';
@@ -1348,8 +1364,11 @@ var LumoHabitTracker = (function() {
             html += '</div>';
             html += '</div>';
 
-            // Good Habits Section
-            html += '<div class="panel rise d1" style="margin-bottom:20px;">';
+            // Two Column Layout - Good Habits (Left) and Bad Habits (Right)
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+            
+            // Good Habits Section (Left)
+            html += '<div class="panel rise d1">';
             html += '<div class="lbl">';
             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">';
             html += '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>';
@@ -1359,9 +1378,9 @@ var LumoHabitTracker = (function() {
             html += '</div>';
             
             if (habitData.goodHabits.length === 0) {
-                html += '<p style="color:var(--dim);font-size:13.5px;line-height:1.7;">No good habits yet. Click "+ Add Good Habit" to start building positive routines.</p>';
+                html += '<p style="color:var(--dim);font-size:13.5px;line-height:1.7;margin-top:15px;">No good habits yet.</p>';
             } else {
-                html += '<div style="display:grid;gap:12px;margin-top:15px;">';
+                html += '<div style="display:flex;flex-direction:column;gap:10px;margin-top:15px;">';
                 for (var i = 0; i < habitData.goodHabits.length; i++) {
                     var habit = habitData.goodHabits[i];
                     var today = new Date().toISOString().split('T')[0];
@@ -1369,50 +1388,37 @@ var LumoHabitTracker = (function() {
                     var completed = entries.length >= habit.repetitions;
                     var streak = calculateGoodStreak(habit.history, habit.repetitions, habit.start);
                     
-                    html += '<div style="border:1px solid var(--line);border-radius:10px;padding:15px;">';
+                    html += '<div style="border:1px solid var(--line);border-radius:8px;padding:10px;">';
                     html += '<div style="display:flex;justify-content:space-between;align-items:start;">';
                     html += '<div style="flex:1;">';
                     html += '<div style="font-weight:600;color:var(--fg);">' + escapeHtml(habit.name) + '</div>';
                     if (habit.details) {
-                        html += '<div style="color:var(--dim);font-size:12.5px;margin-top:4px;">' + escapeHtml(habit.details) + '</div>';
+                        html += '<div style="color:var(--dim);font-size:11px;margin-top:2px;">' + escapeHtml(habit.details) + '</div>';
                     }
-                    html += '<div style="color:var(--dim);font-size:12px;margin-top:6px;">';
-                    html += habit.repetitions + 'x per day &middot; Streak: <strong style="color:var(--accent);">' + streak + ' days</strong>';
+                    html += '<div style="color:var(--dim);font-size:10.5px;margin-top:4px;">';
+                    html += habit.repetitions + 'x/day &middot; Streak: <strong style="color:var(--accent);">' + streak + 'd</strong>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div style="text-align:right;">';
                     if (completed) {
-                        html += '<div style="color:#22c55e;font-size:12px;font-weight:600;">✓ Completed</div>';
+                        html += '<div style="color:#22c55e;font-size:10px;font-weight:600;">✓ Done</div>';
                     } else {
-                        html += '<div style="color:var(--dim);font-size:12px;">' + entries.length + '/' + habit.repetitions + ' today</div>';
+                        html += '<div style="color:var(--dim);font-size:10px;">' + entries.length + '/' + habit.repetitions + '</div>';
                     }
-                    html += '<div style="margin-top:8px;">';
-                    html += '<button onclick="LumoHabitTracker.logGoodHabit(' + i + ')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11.5px;margin-right:6px;">Log Completion</button>';
-                    html += '<button onclick="LumoHabitTracker.editGoodHabitUI(' + i + ')" style="padding:6px 12px;background:var(--line);color:var(--fg);border:none;border-radius:6px;cursor:pointer;font-size:11.5px;">Edit</button>';
+                    html += '<div style="margin-top:4px;">';
+                    html += '<button onclick="LumoHabitTracker.logGoodHabit(' + i + ')" style="padding:4px 8px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px;">Log</button>';
+                    html += '<button onclick="LumoHabitTracker.editGoodHabitUI(' + i + ')" style="padding:4px 8px;background:var(--line);color:var(--fg);border:none;border-radius:4px;cursor:pointer;font-size:10px;margin-left:3px;">Edit</button>';
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
-                    
-                    // Show today's timestamps
-                    if (entries.length > 0) {
-                        html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);">';
-                        html += '<div style="font-size:11.5px;color:var(--dim);margin-bottom:6px;">Today\'s completions:</div>';
-                        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
-                        for (var j = 0; j < entries.length; j++) {
-                            html += '<span style="background:var(--line);padding:4px 10px;border-radius:4px;font-size:11.5px;color:var(--fg);">' + entries[j] + '</span>';
-                        }
-                        html += '</div>';
-                        html += '</div>';
-                    }
-                    
                     html += '</div>';
                 }
                 html += '</div>';
             }
             html += '</div>';
 
-            // Bad Habits Section
-            html += '<div class="panel rise d1" style="margin-bottom:20px;">';
+            // Bad Habits Section (Right)
+            html += '<div class="panel rise d1">';
             html += '<div class="lbl">';
             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">';
             html += '<circle cx="12" cy="12" r="10"/>';
@@ -1421,6 +1427,56 @@ var LumoHabitTracker = (function() {
             html += '</svg>';
             html += '<span class="leaf">Bad Habits</span>';
             html += '</div>';
+            
+            if (habitData.badHabits.length === 0) {
+                html += '<p style="color:var(--dim);font-size:13.5px;line-height:1.7;margin-top:15px;">No bad habits tracked.</p>';
+            } else {
+                html += '<div style="display:flex;flex-direction:column;gap:10px;margin-top:15px;">';
+                for (var i = 0; i < habitData.badHabits.length; i++) {
+                    var badHabit = habitData.badHabits[i];
+                    var today = new Date().toISOString().split('T')[0];
+                    var dayData = badHabit.history[today];
+                    var failed = dayData && dayData.fails && dayData.fails.length > 0;
+                    var isProtected = dayData && dayData.protected;
+                    var streak = calculateBadStreak(badHabit.history, badHabit.createdAt);
+                    
+                    html += '<div style="border:1px solid var(--line);border-radius:8px;padding:10px;">';
+                    html += '<div style="display:flex;justify-content:space-between;align-items:start;">';
+                    html += '<div style="flex:1;">';
+                    html += '<div style="font-weight:600;color:var(--fg);">' + escapeHtml(badHabit.name) + '</div>';
+                    if (badHabit.duration) {
+                        html += '<div style="color:var(--dim);font-size:11px;margin-top:2px;">' + escapeHtml(badHabit.duration) + '</div>';
+                    }
+                    html += '<div style="color:var(--dim);font-size:10.5px;margin-top:4px;">';
+                    html += 'Clean: <strong style="color:#22c55e;">' + streak + 'd</strong>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div style="text-align:right;">';
+                    if (isProtected) {
+                        html += '<div style="color:#22c55e;font-size:10px;font-weight:600;">🛡️ Safe</div>';
+                    } else if (failed) {
+                        html += '<div style="color:#ef4444;font-size:10px;font-weight:600;">✗ Failed</div>';
+                    } else {
+                        html += '<div style="color:#22c55e;font-size:10px;font-weight:600;">✓ Clean</div>';
+                    }
+                    html += '<div style="margin-top:4px;">';
+                    if (!isProtected && !failed) {
+                        html += '<button onclick="LumoHabitTracker.activateShield(' + i + ')" style="padding:4px 6px;background:var(--line);color:var(--fg);border:none;border-radius:4px;cursor:pointer;font-size:9px;">🛡️</button>';
+                    }
+                    if (!failed) {
+                        html += '<button onclick="LumoHabitTracker.logBadHabitFail(' + i + ')" style="padding:4px 6px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:9px;margin-left:3px;">Log</button>';
+                    }
+                    html += '<button onclick="LumoHabitTracker.editBadHabitUI(' + i + ')" style="padding:4px 6px;background:var(--line);color:var(--fg);border:none;border-radius:4px;cursor:pointer;font-size:9px;margin-left:3px;">Edit</button>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            
+            html += '</div>'; // End grid container
             
             if (habitData.badHabits.length === 0) {
                 html += '<p style="color:var(--dim);font-size:13.5px;line-height:1.7;">No bad habits being tracked. Use this to monitor and reduce negative patterns.</p>';
