@@ -984,11 +984,13 @@ var LumoHabitTracker = (function() {
             var repetitions = parseInt(repsInput) || 1;
             
             try {
-                addGoodHabit(name, details, repetitions);
+                LumoHabitTracker.addGoodHabit(name, details, repetitions);
                 alert('Good habit added successfully!');
                 // Re-render if in app context
                 if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
                     LumoApp.loadModule('habits');
+                } else {
+                    LumoHabitTracker.renderToMain();
                 }
             } catch (e) {
                 alert('Error: ' + e.message);
@@ -1005,11 +1007,13 @@ var LumoHabitTracker = (function() {
             var duration = prompt('How long has this been a habit? (e.g., "Since 2 years"):', 'Unknown') || 'Unknown';
             
             try {
-                addBadHabit(name, duration);
+                LumoHabitTracker.addBadHabit(name, duration);
                 alert('Bad habit added successfully!');
                 // Re-render if in app context
                 if (typeof LumoApp !== 'undefined' && LumoApp.currentModule === 'habits') {
                     LumoApp.loadModule('habits');
+                } else {
+                    LumoHabitTracker.renderToMain();
                 }
             } catch (e) {
                 alert('Error: ' + e.message);
